@@ -1,68 +1,83 @@
 ﻿#!/bin/bash
 
+workdir=$(pwd)
+
+url_autoupdate_script="https://raw.githubusercontent.com/serdaraltin/FTP-Version-Control/main/autoupdate.sh"
+url_autoupdate_config="https://raw.githubusercontent.com/serdaraltin/FTP-Version-Control/main/autoupdate.config"
+file_autoupdate_script="autoupdate.sh"
+file_autoupdate_config="autoupdate.config"
+path_autoupdate="${workdir}/autoupdate"
+
+id_game="1pgpN5cUjRivHtAZLnpglHazWnfARL4Fd"
+zip_game="game.zip"
+dir_game="game"
+file_game="game.sh"
+path_game="${workdir}/${dir_game}"
+
+id_pixelstreaming="1LiRMdsmIqOa1-7uoC7O0lVmuojvX2cQm"
+zip_stream="pixelstreaming.zip"
+dir_stream="pixelstreaming"
+
+file_signal="${dir_stream}/platform_scripts/bash/Start_WithTURN_SignallingServer.sh"
+file_stream_script="startstream.sh"
+path_stream="${workdir}/${dir_stream}"
+
+file_replace_script="replace.py"
+
+file_ssl_script="ssl.sh"
+
+
+#Stream script context
+script_pixelstreaming="#!/bin/bash
+SHELL=/bin/bash
+${workdir}/${file_ssl_script}
+${workdir}/${file_signal} > ${path_stream}/log &
+echo "'$(ec2metadata --instance-id) > '${workdir}/${dir_game}'/instance_id'" &&
+${workdir}/${dir_game}/${file_game} -AudioMixer -PixelStreamingIP=localhost -PixelStreamingPort=8888 -RenderOffScreen -ForceRes -ResX=1920 -ResY=1080 > ${path_game}/log &"
+
+
+cron_autoupdate="@reboot cd ${path_autoupdate} && bash ${file_autoupdate_script} > ${path_autoupdate}/log"
+cron_stream="@reboot cd ${path_stream} && bash ${file_stream_script}"
+
 while getopts u:r: option
 do 
-    case "${option}"
-        in
-        u)s_update=${OPTARG};;
-        r)s_reboot=${OPTARG};;
+    case "${option}" 
+    in
+        u)arg_update=${OPTARG};;
+        r)arg_reboot=${OPTARG};;
     esac
 done
 
-if [ -z "$s_update" ]; then
+if [ -z "$arg_update" ]; then
         echo "Installing requireed packages..."
         sudo apt update -y
-        sudo apt install net-tools -y
-        sudo apt install vsftpd -y
+        sudo apt install certbot -y
         sudo apt install unzip -y
         sudo apt install zip -y
-        sudo apt install dropbear -y
+        sudo apt install jq -y
         sudo apt install nvidia-driver-515 nvidia-dkms-515 -y
         
-        echo "Configuring requireed packages..."
         sudo systemctl enable cron
-        sudo systemctl start cron
-        
-        sudo systemctl enable vsftpd
-        sudo systemctl start vsftpd
 fi
 
-s_pwd=$(pwd)
-
-s_pixel_id="1LiRMdsmIqOa1-7uoC7O0lVmuojvX2cQm"
-s_pixel_file="pixelstreaming.zip"
-
-s_game_id="1pgpN5cUjRivHtAZLnpglHazWnfARL4Fd"
-s_game_file="game.zip"
-
-s_game="${s_pwd}/game/game.sh -AudioMixer -PixelStreamingIP=localhost -PixelStreamingPort=8888 -RenderOffScreen -ForceRes -ResX=1920 -ResY=1080"
-s_pixel="${s_pwd}/pixelstreaming/platform_scripts/bash/Start_WithTURN_SignallingServer.sh"
-
-s_script_pixel="startpixelstreaming.sh"
-s_script_game="startgame.sh"
-
-s_cron_pixel="@reboot ${s_pwd}/${s_script_pixel}"
-s_cron_game="@reboot ${s_pwd}/${s_script_game}"
-s_cron_instance_id ="@reboot echo $(ec2metadata --instance-id) > ${s_pwd}/game/instance_id"
-
-if ! [ -z "$s_update" ]; then
-        s_game_id = $s_update
+if ! [ -z "$arg_update" ]; then
+        id_gameW=$arg_update
         echo "Game will be updated."
-        rm -rf game
+        rm -rf ${dir_game}
 fi
 
-confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id='${s_game_id} -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')
+confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id='${id_game} -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')
 echo $confirm
 echo "Downloading Game..."
-wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$confirm&id=${s_game_id}" -O ${s_game_file} && rm -rf /tmp/cookies.txt
+wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$confirm&id=${id_game}" -O ${zip_game} && rm -rf /tmp/cookies.txt
 
-echo "Unziping game archive..."
-unzip $s_game_file -d "${s_pwd}/game"
+echo "Unziping game script..."
+unzip -o ${zip_game} -d ${path_game}
 
-rm $s_game_file
-echo "Deleted the game archive."
+rm $zip_game
+echo "Deleted the game zip."
 
-if ! [ -z "$s_update" ]; then
+if ! [ -z "$arg_update" ]; then
         echo "Game has been updated."
         echo "It will reboot after 5 seconds..."
         sleep 5
@@ -71,60 +86,87 @@ if ! [ -z "$s_update" ]; then
         exit
 fi
 
-confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id='${s_pixel_id} -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')
+confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id='${id_pixelstreaming} -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')
 echo $confirm
 echo "Downloading Custom PixelStreaming script..."
-wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$confirm&id=${s_pixel_id}" -O ${s_pixel_file} && rm -rf /tmp/cookies.txt
+wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$confirm&id=${id_pixelstreaming}" -O ${zip_stream} && rm -rf /tmp/cookies.txt
 
-echo "Unziping pixelstreaming archive..."
-unzip $s_pixel_file 
+echo "Unziping pixelstreaming script..."
+unzip -o ${zip_stream} -d ${workdir}
 
-rm $s_pixel_file
-echo "Deleted the pixelstreaming archive."
 
-if [ ! -f "$s_script_pixel" ]; then
-        echo $s_pixel > $s_script_pixel
-        chmod +x $s_script_pixel
-        echo "Created the pixelstreaming script."
+rm $zip_stream
+echo "Deleted the pixelstreaming script."
+
+
+if [ ! -f "$path_stream/${file_stream_script}" ]; then
+        while IFS= read -r line; do
+                echo "$line" >> "$path_stream/${file_stream_script}"
+        done <<< "${script_pixelstreaming}"
+        chmod +x "$path_stream/${file_stream_script}"
+        echo "Created the stream script."
 fi
 
-if [ ! -f "$s_script_game" ]; then
-        echo $s_game > $s_script_game
-        chmod +x $s_script_game
-        echo "Created the game script."
+if [ ! -f "$path_stream/${file_replace_script}" ]; then
+script_replace="import sys
+ip = sys.argv[1]
+print(ip.replace('"."', '"-"'))" 
+        while IFS= read -r line; do
+                echo "$line" >> $path_stream/${file_replace_script}
+        done <<< "$script_replace"
+
+chmod +x "$path_stream/${file_replace_script}"
+echo "Created the replace script."
+
+fi
+
+if [ ! -f "$path_stream/${file_ssl_script}" ]; then
+script_ssl="#!/bin/bash
+ip=$(curl http://checkip.amazonaws.com)
+domain="testalesdigi.xyz"
+subname="'$(python3 '${path_stream}/${file_replace_script}' $ip)'"
+subdomain="'$subname.$domain'"
+
+"'sudo certbot certonly --standalone --agree-tos --preferred-challenges http -d $subdomain --non-interactive -m ssl-certificate@digitales.com.tr'"
+
+sudo mkdir ${path_stream}/certificates/
+sudo cp /etc/letsencrypt/live/$subdomain/fullchain.pem ${path_stream}/certificates/client-cert.pem
+sudo cp /etc/letsencrypt/live/$subdomain/privkey.pem ${path_stream}/certificates/client-key.pem"
+
+        while IFS= read -r line; do
+                echo "$line" >> $path_stream/${file_ssl_script}
+        done <<< "$script_ssl"
+
+chmod +x "$path_stream/${file_ssl_script}"
+echo "Created the ssl script."
+
+fi
+
+if [ ! -f "${path_autoupdate}/${file_autoupdate_script}" ]; then
+        mkdir "${path_autoupdate}"
+        wget "${url_autoupdate_script}" -O "${path_autoupdate}/${file_autoupdate_script}"
+        wget "${url_autoupdate_config}" -O "${path_autoupdate}/${file_autoupdate_config}"
+        chmod +x "${path_autoupdate}/${file_autoupdate_script}"
+        echo "Downloaded the autoupdate script."
 fi
 
 crontab -l > tmp_cron
 
-if ! grep -q "${s_cron_pixel}" tmp_cron ; then
-        echo $s_cron_pixel >> tmp_cron
-        echo "Added the pixelstreaming script to crontab"
+if ! grep -q "${cron_autoupdate}" tmp_cron ; then
+        echo $cron_autoupdate >> tmp_cron
 fi
 
-if ! grep -q "${s_cron_game}" tmp_cron ; then
-        echo $s_cron_game >> tmp_cron
-        echo "Added the startgame script to crontab"
+if ! grep -q "${cron_stream}" tmp_cron ; then
+        echo $cron_stream >> tmp_cron
 fi
 
-if ! grep -q "${s_cron_instance_id}" tmp_cron; then
-        echo $s_cron_instance_id >> tmp_cron
-        echo "Added the instance id script to crontab"
-fi
+echo "Added the all script to crontab."
 
 crontab tmp_cron
 echo "Updated the crontab."
 
 rm tmp_cron
 echo "Deleted the tmp_cron"
-
-
-if ! [ $s_reboot = "no" ]; then
-        echo "It will reboot after 5 seconds..."
-        sleep 5
-        echo "Good bye."
-        sudo reboot
-        exit
-fi
 
 echo "Do you want to reboot this computer?"
 
