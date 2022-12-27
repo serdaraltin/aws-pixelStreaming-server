@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 
 workdir=$(pwd)
 
@@ -30,10 +30,10 @@ file_ssl_script="ssl.sh"
 #Stream script context
 script_pixelstreaming="#!/bin/bash
 SHELL=/bin/bash
-${workdir}/${file_ssl_script}
-${workdir}/${file_signal} > ${path_stream}/log &
 echo "'$(ec2metadata --instance-id) > '${workdir}/${dir_game}'/instance_id'" &&
-${workdir}/${dir_game}/${file_game} -AudioMixer -PixelStreamingIP=localhost -PixelStreamingPort=8888 -RenderOffScreen -ForceRes -ResX=1920 -ResY=1080 > ${path_game}/log &"
+${workdir}/${dir_game}/${file_game} -AudioMixer -PixelStreamingIP=localhost -PixelStreamingPort=8888 -RenderOffScreen -ForceRes -ResX=1920 -ResY=1080 > ${path_game}/log &
+${path_stream}/${file_ssl_script} &
+${workdir}/${file_signal} > ${path_stream}/log &"
 
 
 cron_autoupdate="@reboot cd ${path_autoupdate} && bash ${file_autoupdate_script} > ${path_autoupdate}/log"
