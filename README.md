@@ -104,12 +104,6 @@ This document provides a step-by-step guide on setting up PixelStreaming service
 - This document is for guidance purposes and requires careful execution of each step.
 - Consider potential AWS costs and ensure to shut down unnecessary resources.
 
-## Help and Support
+## License Information
 
-If you encounter any issues during the installation process or need additional assistance, you can utilize [AWS Support](https://aws.amazon.com/support/) resources or ask questions in relevant communities.
-
-This document provides a detailed guide to setting up Unreal Engine PixelStreaming service on AWS. However, performing complex tasks like these requires careful attention and precision.
-
----
-
-This updated document explains the process of setting up the Unreal Engine PixelStreaming service on AWS in a detailed manner. However, it's important to approach such complex operations with caution and care to ensure a secure and error-free experience.
+The command script and associated files in this repository are distributed under the MIT License. This means that you're free to use, modify, and distribute the code as long as you include the original license notice. For more details, please refer to the [LICENSE](LICENSE) file in the repository.
