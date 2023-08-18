@@ -2,8 +2,13 @@
 
 workdir=$(pwd)
 
-url_autoupdate_script="https://raw.githubusercontent.com/serdaraltin/FTP-Version-Control/main/autoupdate.sh"
-url_autoupdate_config="https://raw.githubusercontent.com/serdaraltin/FTP-Version-Control/main/autoupdate.config"
+
+user="serdaraltin"
+repo="AWS-PixelStreaming-Autoupdate"
+autoupdate="autoupdate"
+
+url_autoupdate_script="https://raw.githubusercontent.com/$user/$repo/main/$autoupdate.sh"
+url_autoupdate_config="https://raw.githubusercontent.com/$user/$repo/main/$autoupdate.config"
 file_autoupdate_script="autoupdate.sh"
 file_autoupdate_config="autoupdate.config"
 path_autoupdate="${workdir}/autoupdate"
@@ -38,6 +43,8 @@ ${workdir}/${file_signal} > ${path_stream}/log &"
 
 cron_autoupdate="@reboot cd ${path_autoupdate} && bash ${file_autoupdate_script} > ${path_autoupdate}/log"
 cron_stream="@reboot cd ${path_stream} && bash ${file_stream_script}"
+cron_shutdown="@reboot shutdown -P +20"
+
 
 while getopts u:r: option
 do 
@@ -150,6 +157,8 @@ if [ ! -f "${path_autoupdate}/${file_autoupdate_script}" ]; then
         echo "Downloaded the autoupdate script."
 fi
 
+sudo chmod u+s /sbin/shutdown
+
 crontab -l > tmp_cron
 
 if ! grep -q "${cron_autoupdate}" tmp_cron ; then
@@ -159,6 +168,11 @@ fi
 if ! grep -q "${cron_stream}" tmp_cron ; then
         echo $cron_stream >> tmp_cron
 fi
+
+if ! grep -q "${cron_shutdown}" tmp_cron ; then
+        echo $cron_shutdown >> tmp_cron
+fi
+
 
 echo "Added the all script to crontab."
 
